@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Оповещение о разливе нефти: интерактивная таблица</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #fffff;
+            font-family: 'Segoe UI', 'Roboto', 'Inter', system-ui, -apple-system, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 2rem 1rem;
+        }
+
+        .card {
+            max-width: 1280px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.94);
+            border-radius: 2rem;
+            box-shadow: 0 24px 42px -16px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(2px);
+            overflow: hidden;
+            border: 1px solid rgba(255,255,240,0.6);
+            transition: all 0.2s;
+        }
+
+        .header {
+            padding: 1.5rem 2rem 0.8rem 2rem;
+            background: rgba(255, 250, 245, 0.5);
+            border-bottom: 1px solid #cfe0e8;
+        }
+
+        .header h1 {
+            font-size: 1.75rem;
+            font-weight: 600;
+            background: linear-gradient(120deg, #1f5f6e, #328397);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            letter-spacing: -0.2px;
+        }
+
+        .sub-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-top: 0.6rem;
+            color: #476b78;
+            font-size: 0.9rem;
+        }
+
+        .btn-download {
+            background: #deecf2;
+            border: none;
+            padding: 0.5rem 1.3rem;
+            border-radius: 60px;
+            font-family: inherit;
+            font-weight: 500;
+            font-size: 0.85rem;
+            color: #1e4a5f;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: 0.2s;
+            border: 1px solid #c2d6e2;
+        }
+
+        .btn-download:hover {
+            background: #cddfe8;
+            transform: scale(0.97);
+            border-color: #8fb1c0;
+            color: #083344;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            padding: 1.5rem 2rem 2rem 2rem;
+        }
+
+        .notification-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.93rem;
+            border-radius: 1.2rem;
+            overflow: hidden;
+            background: white;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+        }
+
+        .notification-table th {
+            background: #d5e8ed;
+            color: #1a4d5c;
+            padding: 1rem 1.2rem;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid #b9d2dd;
+        }
+
+        .notification-table td {
+            padding: 1rem 1.2rem;
+            border-bottom: 1px solid #e4eef3;
+            background: #ffffff;
+            color: #1f3e48;
+            vertical-align: top;
+        }
+
+        /* кликабельные строки */
+        .notification-table tbody tr {
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .notification-table tbody tr:hover td {
+            background-color: #f3fafd;
+        }
+
+        /* Стили для бейджей */
+        .badge {
+            display: inline-block;
+            background: #f6e5db;
+            color: #bc5a2c;
+            padding: 0.2rem 0.7rem;
+            border-radius: 30px;
+            font-weight: 700;
+            font-size: 0.75rem;
+        }
+
+        .coord {
+            background: #eaf1f5;
+            font-family: monospace;
+            padding: 0.1rem 0.4rem;
+            border-radius: 12px;
+        }
+
+        footer {
+            background: #f9fdfe;
+            padding: 0.8rem 2rem 1.2rem;
+            font-size: 0.72rem;
+            color: #7a95a1;
+            text-align: center;
+            border-top: 1px solid #e2edf2;
+        }
+
+        ul {
+            margin: 0;
+            padding-left: 1.2rem;
+        }
+        li {
+            margin: 0.2rem 0;
+        }
+
+        /* === УМНЫЙ ТОСТ: фиксированная ширина, перенос текста === */
+        .info-toast {
+            position: fixed;
+            bottom: 28px;
+            left: 50%;
+            transform: translateX(-50%) scale(0.96);
+            background: #1f3e48e6;
+            backdrop-filter: blur(12px);
+            color: #fef9e8;
+            padding: 0.85rem 1.6rem;
+            border-radius: 48px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            line-height: 1.4;
+            z-index: 2000;
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 248, 225, 0.3);
+            pointer-events: none;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            opacity: 0;
+            text-align: center;
+            letter-spacing: 0.2px;
+            /* Ограничиваем ширину и добавляем перенос */
+            max-width: min(90vw, 560px);
+            width: auto;
+            white-space: normal;
+            word-wrap: break-word;
+            font-family: 'Segoe UI', 'Roboto', system-ui;
+        }
+
+        @media print {
+            body {
+                background: white;
+            }
+            .btn-download {
+                display: none;
+            }
+            .info-toast {
+                display: none;
+            }
+            .table-wrapper {
+                padding: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="card">
+    <div class="header">
+        <h1>🚨 Оповещение о разливе нефти и нефтепродуктов</h1>
+        <div class="sub-header">
+            <span>⚡ Двухэтапный порядок (ред. 2025) — сроки с момента <u>обнаружения</u></span>
+            <button class="btn-download" id="downloadWordBtn">📄 Скачать таблицу (Word)</button>
+        </div>
+    </div>
+
+    <div class="table-wrapper">
+        <table class="notification-table" id="alertTable">
+            <thead>
+                <tr>
+                    <th>Параметр</th>
+                    <th>🔔 1-й этап (срочный)</th>
+                    <th>🌊 2-й этап — водный объект</th>
+                    <th>🌲 2-й этап — сухопутная часть</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr data-stage="Сроки оповещения" 
+                    data-details="Первый этап: 30 минут с момента ОБНАРУЖЕНИЯ. Второй этап: до 4 часов — для водных объектов (включая водоохранные зоны), до 6 часов — для сухопутной территории РФ.">
+                    <td><strong>⏱️ Срок с момента обнаружения</strong></td>
+                    <td><span class="badge">до 30 минут</span></td>
+                    <td><span class="badge">до 4 часов</span> (включая водоохранные зоны)</td>
+                    <td><span class="badge">до 6 часов</span></td>
+                </tr>
+                <tr data-stage="Способы связи" 
+                    data-details="Приоритет — электронный документооборот (юридически значимые сообщения). Допускаются любые каналы (телефон, факс) при условии обязательного подтверждения получения адресатом.">
+                    <td><strong>📡 Способ связи</strong></td>
+                    <td colspan="3">Электронный документооборот. Иные способы — только с подтверждением получения.</td>
+                </tr>
+                <tr data-stage="Адресаты оповещения" 
+                    data-details="Оповещаются 5 групп: 1) территориальный орган МЧС (ЦУКС); 2) органы власти субъекта и ОМСУ (ЕДДС); 3) территориальный орган Росприроднадзора; 4) территориальный орган Ростехнадзора (для ОПО); 5) администрация бассейна внутренних водных путей (при разливе на водных путях).">
+                    <td><strong>📋 Адресаты оповещения</strong></td>
+                    <td colspan="3">
+                        <ul>
+                            <li>Территориальный орган МЧС (ЦУКС)</li>
+                            <li>Органы исполнительной власти субъекта и ОМСУ (ЕДДС)</li>
+                            <li>Территориальный орган Росприроднадзора</li>
+                            <li>Территориальный орган Ростехнадзора (если объект ОПО)</li>
+                            <li>Администрация бассейна внутренних водных путей (при разливе на ВВП/судах)</li>
+                        </ul>
+                    </td>
+                </tr>
+                <tr data-stage="Содержание сообщений" 
+                    data-details="Срочный этап (до 30 мин): время обнаружения, вид объекта, организация, пострадавшие, ФИО передающего. Полный этап (до 4/6 ч): добавляются координаты места разлива (широта, долгота), масштаб, причины, принимаемые меры, угроза водным объектам и прогноз.">
+                    <td><strong>📄 Что передаём</strong></td>
+                    <td>✔️ Время <strong>обнаружения</strong><br>✔️ Вид объекта / организация<br>✔️ Пострадавшие (погибшие/травмы)<br>✔️ ФИО, должность передающего</td>
+                    <td colspan="2">
+                        <strong>➕ Дополнительно (до 4 или 6 часов):</strong><br>
+                        • Характеристика и масштаб разлива<br>
+                        • <span class="coord">🌐 Координаты (широта, долгота)</span><br>
+                        • Известные причины, попадание в водный объект / прогноз пятна<br>
+                        • Принимаемые меры, количество сил и средств
+                    </td>
+                </tr>
+                <tr data-stage="Фиксация и отчетность" 
+                    data-details="Вносить запись в государственные реестры не требуется. Однако эксплуатирующая организация обязана сохранять любые подтверждения отправки уведомлений: входящие номера, квитанции об отправке по ЭДО, скриншоты, логи.">
+                    <td><strong>📎 Фиксация факта оповещения</strong></td>
+                    <td colspan="3">
+                        Внесение записи в госреестр <strong>не требуется</strong>. Организация <strong>обязана сохранять</strong> подтверждения отправки (вх. номера, квитанции, логи электронного документооборота).
+                    </td>
+                </tr>
+                <tr data-stage="Особенности двухэтапности" 
+                    data-details="Разрешено направить единое полное сообщение, но важно уложиться в жёсткие сроки: для водного объекта — не позже 4 часов, для суши — 6 часов. 30-минутный рубеж для первого сигнала обязателен даже при неполных данных.">
+                    <td><strong>🧾 Особенности двухэтапности</strong></td>
+                    <td colspan="3">
+                        🔸 <strong>Первые 30 минут</strong> — базовая информация (сигнал тревоги).<br>
+                        🔸 <strong>До 4 или 6 часов</strong> — расширенное донесение. Допускается одно полное сообщение, если укладывается в срок.
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <footer>
+        📌 <strong>Кликабельные строки</strong> — нажмите на любую строку, чтобы увидеть пояснение (всплывающая подсказка с ограниченной шириной и переносом текста).<br>
+        ✅ Таблица актуальна после внесения изменений в постановление № 2451 (срок действия продлён до 01.09.2032). Все сроки — с момента <strong>обнаружения</strong> разлива.
+    </footer>
+</div>
+
+<script>
+    // Умный тост с нормальной шириной и переносом
+    let toast = document.querySelector('.info-toast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.className = 'info-toast';
+        document.body.appendChild(toast);
+    }
+
+    function showSmartToast(message) {
+        if (!toast) return;
+        toast.textContent = message;
+        toast.style.opacity = '1';
+        toast.style.transform = 'translateX(-50%) scale(1)';
+        if (window.toastTimeout) clearTimeout(window.toastTimeout);
+        window.toastTimeout = setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateX(-50%) scale(0.96)';
+        }, 3200);
+    }
+
+    // Добавляем обработчики на каждую строку таблицы (кроме заголовка)
+    const rows = document.querySelectorAll('#alertTable tbody tr');
+    rows.forEach(row => {
+        const stage = row.getAttribute('data-stage');
+        const details = row.getAttribute('data-details');
+        
+        if (stage && details) {
+            row.addEventListener('click', (e) => {
+                e.stopPropagation();
+                showSmartToast(`📌 ${stage}: ${details}`);
+                // Приятный визуальный отклик
+                const originalBg = row.style.backgroundColor;
+                row.style.backgroundColor = '#fff2e0';
+                setTimeout(() => { row.style.backgroundColor = ''; }, 200);
+            });
+        } else {
+            // fallback на случай отсутствия атрибутов
+            const textHint = row.innerText.trim().substring(0, 100);
+            row.addEventListener('click', () => {
+                showSmartToast(`ℹ️ ${textHint}... (смотрите требования ПП №2451)`);
+            });
+        }
+    });
+
+    // Экспорт в Word (без потери данных)
+    function exportToWord() {
+        const originalTable = document.getElementById('alertTable');
+        if (!originalTable) return;
+        const clonedTable = originalTable.cloneNode(true);
+        
+        const styles = `
+            <style>
+                body { font-family: 'Calibri', 'Segoe UI', Arial, sans-serif; margin: 2rem; }
+                h1 { color: #1f5f6e; border-left: 6px solid #6db1bc; padding-left: 18px; }
+                .sub { color: #2d6a7c; margin-bottom: 24px; }
+                table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+                th { background: #d5e8ed; border: 1px solid #9bbec9; padding: 10px; text-align: left; }
+                td { border: 1px solid #c8dce4; padding: 10px; vertical-align: top; }
+                .badge { background: #f6e5db; display: inline-block; padding: 2px 12px; border-radius: 20px; }
+                .coord { background: #eaf1f5; font-family: monospace; padding: 0 4px; }
+                ul { margin: 0; padding-left: 20px; }
+                footer { margin-top: 30px; font-size: 10pt; color: gray; text-align: center; }
+            </style>
+        `;
+        
+        const docHtml = `<!DOCTYPE html>
+        <html>
+        <head><meta charset="UTF-8"><title>Оповещение о разливе нефти</title>${styles}</head>
+        <body>
+            <h1>🚨 Порядок оповещения о разливе нефти и нефтепродуктов</h1>
+            <div class="sub">Двухэтапная система (ПП РФ №2451 в действующей редакции)</div>
+            ${clonedTable.outerHTML}
+            <footer>Документ сформирован ${new Date().toLocaleDateString('ru-RU')} в соответствии с требованиями к оповещению (сроки с момента обнаружения).</footer>
+        </body>
+        </html>`;
+        
+        const blob = new Blob([docHtml], { type: 'application/msword' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Оповещение_разлив_нефти_${new Date().toISOString().slice(0,10)}.doc`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+    
+    const downloadBtn = document.getElementById('downloadWordBtn');
+    if (downloadBtn) downloadBtn.addEventListener('click', exportToWord);
+</script>
+</body>
+</html>
